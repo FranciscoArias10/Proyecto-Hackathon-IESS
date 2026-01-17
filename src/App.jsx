@@ -43,7 +43,7 @@ function App() {
           </header>
 
           <div className="flex-1 bg-slate-800/30 border border-slate-700/50 rounded-3xl backdrop-blur-xl shadow-2xl overflow-hidden relative">
-            <VoiceInterface />
+            <VoiceInterface onChecklistUpdate={updateChecklist} />
           </div>
         </div>
 

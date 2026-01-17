@@ -43,6 +43,8 @@ const ChatWidget = ({ onChecklistUpdate }) => {
 
             const data = await response.json();
 
+            console.log('📦 [Frontend] Respuesta recibida del servidor:', data);
+
             setMessages(prev => [...prev, {
                 id: Date.now(),
                 text: data.response,
@@ -50,8 +52,16 @@ const ChatWidget = ({ onChecklistUpdate }) => {
             }]);
 
             // Actualizar la checklist si el backend envió información
-            if (data.checklist && onChecklistUpdate) {
-                onChecklistUpdate(data.checklist);
+            if (data.checklist) {
+                console.log('✅ [Frontend] Checklist encontrada:', data.checklist);
+                if (onChecklistUpdate) {
+                    console.log('🔄 [Frontend] Llamando a updateChecklist');
+                    onChecklistUpdate(data.checklist);
+                } else {
+                    console.error('❌ [Frontend] onChecklistUpdate no está definida');
+                }
+            } else {
+                console.warn('⚠️ [Frontend] No se recibió checklist en la respuesta');
             }
         } catch (error) {
             console.error('Error:', error);

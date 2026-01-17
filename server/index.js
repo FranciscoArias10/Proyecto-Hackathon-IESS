@@ -43,21 +43,44 @@ app.post('/api/chat', async (req, res) => {
 
 Tu objetivo es ayudar a los usuarios con información clara, precisa y amable sobre cómo realizar trámites, requisitos, y agendamiento de citas.
 
-IMPORTANTE: Al final de cada respuesta, debes incluir una checklist contextual según lo que el usuario pregunta:
-- Si pregunta sobre REQUISITOS o DOCUMENTOS: Lista los documentos/requisitos necesarios
-- Si pregunta sobre PASOS o PROCESO: Lista los pasos del procedimiento
-- Si pregunta sobre INFORMACIÓN GENERAL: Lista puntos clave a recordar
+CRÍTICO - FORMATO DE RESPUESTA OBLIGATORIO:
+Debes responder en DOS partes claramente separadas:
 
-Formato de la checklist (SIEMPRE al final de tu respuesta):
+1. RESPUESTA NORMAL: Explica la información solicitada de forma clara y completa.
+
+2. CHECKLIST: Extrae los puntos MÁS IMPORTANTES de tu respuesta y créalos como una checklist.
+
+REGLAS PARA LA CHECKLIST:
+- Si mencionas DOCUMENTOS necesarios → Ponlos en la checklist (ej: "Cédula de identidad", "Certificado de votación")
+- Si mencionas REQUISITOS → Ponlos en la checklist (ej: "Tener 36 aportaciones", "No tener mora")
+- Si mencionas PASOS → Ponlos en la checklist (ej: "Ingresar al portal", "Descargar PDF")
+- Si mencionas DATOS importantes → Ponlos en la checklist (ej: "Edad mínima 60 años", "Costo: gratuito")
+
+FORMATO EXACTO (OBLIGATORIO):
 [CHECKLIST_START]
-Título: [Nombre descriptivo de la checklist]
+Título: [Nombre corto y descriptivo]
 Items:
-- [Item 1]
-- [Item 2]
-- [Item 3]
+- [Item 1 - específico y accionable]
+- [Item 2 - específico y accionable]
+- [Item 3 - específico y accionable]
 [CHECKLIST_END]
 
-La checklist debe tener entre 3 y 8 items relevantes y específicos a la pregunta. Responde siempre en español.`
+EJEMPLO:
+Usuario: "¿Qué necesito para un préstamo quirografario?"
+Tu respuesta:
+"Para solicitar un préstamo quirografario en el IESS necesitas cumplir varios requisitos. Primero, debes tener al menos 36 aportaciones consecutivas. También necesitas tu cédula de identidad vigente y no tener préstamos en mora. El proceso se realiza en línea..."
+
+[CHECKLIST_START]
+Título: Requisitos para Préstamo Quirografario
+Items:
+- Cédula de identidad vigente
+- Mínimo 36 aportaciones consecutivas
+- No tener préstamos en mora
+- Cuenta bancaria activa
+- Acceso al portal web del IESS
+[CHECKLIST_END]
+
+La checklist debe tener entre 3 y 8 items. Responde SIEMPRE en español.`
         },
         {
           role: "user",
@@ -65,12 +88,16 @@ La checklist debe tener entre 3 y 8 items relevantes y específicos a la pregunt
         }
       ],
       model: "llama-3.3-70b-versatile",
-      temperature: 0.5,
-      max_tokens: 1024,
+      temperature: 0.3,
+      max_tokens: 1200,
     });
 
     console.log('Respuesta recibida de Groq');
     const fullResponse = completion.choices[0]?.message?.content || "No pude generar una respuesta.";
+    
+    console.log('\n=== RESPUESTA COMPLETA DE LA IA ===');
+    console.log(fullResponse);
+    console.log('=================================\n');
 
     // Extraer la checklist de la respuesta
     let responseContent = fullResponse;
@@ -78,28 +105,39 @@ La checklist debe tener entre 3 y 8 items relevantes y específicos a la pregunt
 
     const checklistMatch = fullResponse.match(/\[CHECKLIST_START\]([\s\S]*?)\[CHECKLIST_END\]/);
     
+    console.log('¿Se encontró checklist?', checklistMatch ? 'SÍ' : 'NO');
+    
     if (checklistMatch) {
+      console.log('Contenido de la checklist encontrada:', checklistMatch[1]);
+      
       // Remover la checklist de la respuesta visible
       responseContent = fullResponse.replace(/\[CHECKLIST_START\][\s\S]*?\[CHECKLIST_END\]/, '').trim();
       
       const checklistContent = checklistMatch[1];
-      const titleMatch = checklistContent.match(/Título:\s*(.+)/);
-      const itemsMatches = checklistContent.match(/^-\s*(.+)$/gm);
+      const titleMatch = checklistContent.match(/Título:\s*(.+)/i);
+      // Regex flexible para capturar items: acepta -, *, o números como viñetas
+      const itemsMatches = checklistContent.match(/^[\s\t]*[-*•\d\.]+\s+(.+)$/gm);
       
-      if (titleMatch && itemsMatches) {
+      console.log('Título encontrado:', titleMatch ? titleMatch[1] : 'NO');
+      console.log('Items encontrados:', itemsMatches ? itemsMatches.length : 0);
+      
+      if (titleMatch && itemsMatches && itemsMatches.length > 0) {
         checklistData = {
           nombre: titleMatch[1].trim(),
           pasos: itemsMatches.map((item, index) => ({
             id: index + 1,
-            text: item.replace(/^-\s*/, '').trim(),
+            // Limpia el item quitando cualquier tipo de viñeta al principio
+            text: item.replace(/^[\s\t]*[-*•\d\.]+\s+/, '').trim(),
             completed: false
           }))
         };
+        console.log('Checklist creada exitosamente:', checklistData.nombre);
       }
     }
 
     // Si no se generó checklist dinámica, usar la predefinida del trámite
     if (!checklistData) {
+      console.log('Usando checklist predefinida del trámite:', tipoTramite);
       const tramiteInfo = tramitesData[tipoTramite];
       if (tramiteInfo) {
         checklistData = {
@@ -108,6 +146,8 @@ La checklist debe tener entre 3 y 8 items relevantes y específicos a la pregunt
         };
       }
     }
+
+    console.log('Checklist final enviada:', checklistData ? checklistData.nombre : 'NULL');
 
     res.json({ 
       response: responseContent,

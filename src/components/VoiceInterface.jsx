@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Activity, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const VoiceInterface = () => {
+const VoiceInterface = ({ onChecklistUpdate }) => {
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [status, setStatus] = useState("Toque para hablar con el Asistente IESS");
@@ -75,10 +75,25 @@ const VoiceInterface = () => {
             }
 
             const data = await response.json();
+            console.log('📦 [VoiceInterface] Respuesta recibida del servidor:', data);
+
             const aiResponse = data.response;
 
             setResponse(aiResponse);
             setStatus("IA Respondiendo...");
+
+            // Actualizar la checklist si el backend envió información
+            if (data.checklist) {
+                console.log('✅ [VoiceInterface] Checklist encontrada:', data.checklist);
+                if (onChecklistUpdate) {
+                    console.log('🔄 [VoiceInterface] Llamando a updateChecklist');
+                    onChecklistUpdate(data.checklist);
+                } else {
+                    console.error('❌ [VoiceInterface] onChecklistUpdate no está definida');
+                }
+            } else {
+                console.warn('⚠️ [VoiceInterface] No se recibió checklist en la respuesta');
+            }
 
             // Hablar la respuesta
             speakResponse(aiResponse);
@@ -184,10 +199,10 @@ const VoiceInterface = () => {
                     onClick={toggleListening}
                     disabled={isSpeaking}
                     className={`relative z-10 p-8 rounded-full border-4 transition-all duration-300 shadow-2xl ${isListening
-                            ? 'bg-red-500 border-red-400 text-white shadow-red-500/50'
-                            : isSpeaking
-                                ? 'bg-green-500 border-green-400 text-white shadow-green-500/50'
-                                : 'bg-white border-blue-100 text-blue-600 hover:scale-105 shadow-blue-500/30'
+                        ? 'bg-red-500 border-red-400 text-white shadow-red-500/50'
+                        : isSpeaking
+                            ? 'bg-green-500 border-green-400 text-white shadow-green-500/50'
+                            : 'bg-white border-blue-100 text-blue-600 hover:scale-105 shadow-blue-500/30'
                         } ${isSpeaking ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
                 >
                     {isListening ? (
@@ -216,8 +231,8 @@ const VoiceInterface = () => {
 
             <div className="text-center space-y-2 max-w-md">
                 <h2 className={`text-3xl font-bold transition-colors duration-300 ${isListening ? 'text-red-400' :
-                        isSpeaking ? 'text-green-400' :
-                            'text-blue-200'
+                    isSpeaking ? 'text-green-400' :
+                        'text-blue-200'
                     }`}>
                     {status}
                 </h2>
