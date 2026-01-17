@@ -106,25 +106,80 @@ const VoiceInterface = ({ onChecklistUpdate }) => {
         }
     };
 
+    // Función auxiliar para detectar URLs en el texto y renderizarlas como links
+    const renderTextWithLinks = (text) => {
+        // Regex para detectar URLs
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+        // Si no hay links, devolver texto normal
+        if (!text.match(urlRegex)) return <p className="text-white">{text}</p>;
+
+        const parts = text.split(urlRegex);
+
+        return (
+            <p className="text-white">
+                {parts.map((part, index) => {
+                    if (part.match(urlRegex)) {
+                        return (
+                            <a
+                                key={index}
+                                href={part}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 underline break-all"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {part}
+                            </a>
+                        );
+                    }
+                    return part;
+                })}
+            </p>
+        );
+    };
+
     // Función para convertir texto a voz (Text-to-Speech)
     const speakResponse = (text) => {
         // Cancelar cualquier síntesis anterior
         synthRef.current.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        // Limpiar el texto de URLs para que la voz no las lea
+        // Reemplaza URLs http/https por texto vacío o "en el enlace adjunto"
+        const cleanTextForSpeech = text.replace(/(https?:\/\/[^\s]+)/g, "en el enlace que te muestro en pantalla");
+
+        const utterance = new SpeechSynthesisUtterance(cleanTextForSpeech);
         utterance.lang = 'es-ES';
-        utterance.rate = 1.0; // Velocidad normal
-        utterance.pitch = 1.0; // Tono normal
-        utterance.volume = 1.0; // Volumen máximo
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
 
         utterance.onstart = () => {
             setIsSpeaking(true);
             setStatus("IA Hablando...");
         };
 
+        // ... (resto del código igual) ...
+
         utterance.onend = () => {
             setIsSpeaking(false);
-            setStatus("Toque para hablar con el Asistente IESS");
+            setStatus("Preparando escucha...");
+
+            // Reiniciar escucha automáticamente después de un breve delay
+            setTimeout(() => {
+                if (recognitionRef.current) {
+                    try {
+                        recognitionRef.current.start();
+                        setIsListening(true);
+                        setTranscript("");
+                        setStatus("Escuchando de nuevo...");
+                    } catch (error) {
+                        console.error("Error al reiniciar escucha:", error);
+                        // Si ya estaba escuchando o hubo otro error, simplemente volvemos al estado inicial
+                        setStatus("Toque para hablar con el Asistente IESS");
+                    }
+                }
+            }, 500); // 500ms de pausa para evitar eco
         };
 
         utterance.onerror = (event) => {
@@ -267,7 +322,7 @@ const VoiceInterface = ({ onChecklistUpdate }) => {
                         {response && (
                             <div className="bg-green-900/30 border border-green-700/50 rounded-2xl p-4">
                                 <p className="text-xs text-green-400 mb-1 font-semibold">Respuesta:</p>
-                                <p className="text-white">{response}</p>
+                                {renderTextWithLinks(response)}
                             </div>
                         )}
                     </motion.div>
