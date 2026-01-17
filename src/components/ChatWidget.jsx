@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ChatWidget = () => {
+const ChatWidget = ({ onChecklistUpdate }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
         { id: 1, text: "¡Hola! Soy tu asistente virtual del IESS. ¿En qué puedo ayudarte hoy?", sender: 'bot' }
     ]);
     const [inputValue, setInputValue] = useState("");
-
     const [isLoading, setIsLoading] = useState(false);
+    const messagesEndRef = useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -40,6 +48,11 @@ const ChatWidget = () => {
                 text: data.response,
                 sender: 'bot'
             }]);
+
+            // Actualizar la checklist si el backend envió información
+            if (data.checklist && onChecklistUpdate) {
+                onChecklistUpdate(data.checklist);
+            }
         } catch (error) {
             console.error('Error:', error);
             setMessages(prev => [...prev, {
@@ -101,6 +114,7 @@ const ChatWidget = () => {
                                     </div>
                                 </div>
                             )}
+                            <div ref={messagesEndRef} />
                         </div>
 
                         <form onSubmit={handleSend} className="p-3 bg-slate-900 border-t border-slate-700 flex gap-2">

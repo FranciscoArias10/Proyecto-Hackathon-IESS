@@ -6,6 +6,23 @@ import MapWidget from './components/MapWidget';
 import WhatsAppButton from './components/WhatsAppButton';
 
 function App() {
+  const [checklistData, setChecklistData] = useState({
+    nombre: "Proceso General de Trámites IESS",
+    pasos: [
+      { id: 1, text: "Ingresar al portal web del IESS (www.iess.gob.ec)", completed: false },
+      { id: 2, text: "Seleccionar 'Trámites Virtuales'", completed: false },
+      { id: 3, text: "Escoger la categoría según tu perfil", completed: false },
+      { id: 4, text: "Ingresar número de cédula y clave", completed: false },
+      { id: 5, text: "Seleccionar la opción deseada en el menú lateral", completed: false },
+    ]
+  });
+
+  const updateChecklist = (newChecklist) => {
+    if (newChecklist) {
+      setChecklistData(newChecklist);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 overflow-hidden relative selection:bg-blue-500 selection:text-white">
       {/* Background Gradients */}
@@ -35,7 +52,7 @@ function App() {
 
           {/* Top Panel: Checklist */}
           <div className="flex-1 min-h-[300px]">
-            <Checklist />
+            <Checklist checklistData={checklistData} />
           </div>
 
           {/* Bottom Panel: Map */}
@@ -47,7 +64,7 @@ function App() {
       </div>
 
       {/* Floating Chat Widget */}
-      <ChatWidget />
+      <ChatWidget onChecklistUpdate={updateChecklist} />
 
       {/* WhatsApp Button */}
       <WhatsAppButton />
